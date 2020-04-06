@@ -123,13 +123,21 @@ export default ${componentName};
 // };
 
 function cleanComponentDirectory(
-  p: string
+  p: string | string[]
 ): Promise<NodeJS.ErrnoException | null> {
+  let rootPromise = Promise.resolve()
   return new Promise((resolve, reject) => {
-    fs.rmdir(p, { recursive: true }, (err: NodeJS.ErrnoException) => {
-      if (err) reject(err)
-      else resolve()
-    })
+    if (Array.isArray(p)) {
+      for (const strPath of p) {
+        rootPromise.then(() => createComponentDirectory(strPath))
+      }
+      rootPromise.then(() => resolve())
+    } else {
+      fs.rmdir(p, { recursive: true }, (err: NodeJS.ErrnoException) => {
+        if (err) reject(err)
+        else resolve()
+      })
+    }
   })
 }
 
@@ -142,10 +150,10 @@ function createComponentDirectory(
       for (const strPath of p) {
         rootPromise.then(() => createComponentDirectory(strPath))
       }
-      rootPromise.then(() => resolve()).catch(reject)
+      rootPromise.then(() => resolve())
     } else {
       fs.mkdir(p, {}, (err: Error, path: string) => {
-        err ? reject(err) : resolve(path)
+        err ? resolve() : resolve(path)
       })
     }
   })
@@ -237,7 +245,7 @@ async function writeIconsJson(names: IconType[]) {
 ;(async () => {
   try {
     const files = glob.sync(iconPath)
-    await cleanComponentDirectory(componentPath)
+    await cleanComponentDirectory([componentPath, path.dirname(iconsDataDir)])
       .then(() =>
         createComponentDirectory([componentPath, path.dirname(iconsDataDir)])
       )
